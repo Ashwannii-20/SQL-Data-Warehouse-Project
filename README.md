@@ -1,41 +1,104 @@
-# Data Warehouse & Analytics Project
+# SQL Data Warehouse Project
 
-**Author:** Ashwani Tripathi  
+**Author:** Ashwani Tripathi
 
-This project demonstrates a comprehensive data warehousing and analytics solution, from building a data warehouse to generating actionable insights. Designed as a portfolio project, it highlights industry best practices in data engineering and analytics.
+A data warehouse built in **Microsoft SQL Server** using the **Medallion Architecture** (Bronze, Silver, Gold). It combines sales data from two separate source systems, a CRM and an ERP, into one clean model for reporting.
 
----
+![Data flow](docs/data_flow.png)
 
-## 🚀 Project Requirements
+## Status
 
-### Building the Data Warehouse (Data Engineering)
+| Layer | Status | What it does |
+|---|---|---|
+| Bronze | Done | Loads the 6 raw CSV files exactly as received |
+| Silver | Done | Cleans, standardises and aligns keys across CRM and ERP |
+| Gold | In progress | Star schema views: `dim_customers`, `dim_products`, `fact_sales` |
 
-#### Objective
-Develop a modern data warehouse using SQL Server to consolidate sales data, enabling analytical reporting and informed decision-making.
+## Source data
 
-#### Specifications
-- **Data Sources**: Import data from two source systems (ERP and CRM) provided as CSV files.
-- **Data Quality**: Cleanse and resolve data quality issues prior to analysis.
-- **Integration**: Combine both sources into a single, user-friendly data model designed for analytical queries.
-- **Scope**: Focus on the latest dataset only; historization of data is not required.
-- **Documentation**: Provide clear documentation of the data model to support both business stakeholders and analytics teams.
+| System | File | Contents | Rows |
+|---|---|---|---:|
+| CRM | `cust_info.csv` | Customers: name, marital status, gender, created date | 18,493 |
+| CRM | `prd_info.csv` | Products: key, name, cost, product line, start date | 397 |
+| CRM | `sales_details.csv` | Sales orders: dates, quantity, price, sales amount | 60,398 |
+| ERP | `CUST_AZ12.csv` | Customer birthdate and gender | 18,483 |
+| ERP | `LOC_A101.csv` | Customer country | 18,484 |
+| ERP | `PX_CAT_G1V2.csv` | Product category, subcategory, maintenance flag | 36 |
 
----
+The files are in [`datasets/`](datasets/). The sample CRM/ERP data comes from the public "SQL Data Warehouse Project" course by Data With Baraa. The cleaning rules, fixes and documentation here are my own.
 
-## ⚙️ Database Initialization Script
+## Data profiling: issues found
+
+- Leading and trailing spaces in names and keys
+- Coded values: `M`/`S` for marital status, `M`/`F` for gender, `R`/`M`/`S`/`T` for product lines
+- ERP gender written two ways (`Male`/`Female` and `M`/`F`)
+- Countries written several ways (`US`, `USA`, `United States`, `DE`, `Germany`) plus blanks
+- Duplicate and missing customer IDs
+- Product start dates in `dd-mm-yyyy` text format
+- Invalid sales dates (`0`, `5489`, `32154`) stored as integers
+- Missing or negative prices and sales amounts that don't equal quantity × price
+- Impossible birthdates (for example `9999-11-20`)
+- Different customer ID formats between CRM and ERP
+
+## Bronze layer
+
+- **`scripts/bronze/ddl_bronze.sql`** creates 6 tables with every column as `NVARCHAR(50)`, so no raw row fails to load. Type conversion happens in Silver.
+- **`scripts/bronze/proc_load_bronze.sql`** creates `bronze.load_bronze`, which truncates each table and runs `BULK INSERT` from the CSV files. It prints the load time per table and for the whole batch, and uses `TRY...CATCH` with `THROW` so failures are visible.
+
+## Silver layer
+
+- **`scripts/silver/ddl_silver.sql`** creates 6 typed tables (`INT`, `DATE`), with a new `cat_id` column on products.
+- **`scripts/silver/proc_load_silver.sql`** creates `silver.load_silver` (truncate, then `INSERT INTO ... SELECT`), with the same timing and error handling.
+- **`scripts/silver/silver_transformations.sql`** has the cleaning queries on their own, for testing.
+
+**Transformations applied**
+
+| Table | Rules |
+|---|---|
+| crm_cust_info | `TRIM` text; decode marital status and gender; keep the latest record per customer with `ROW_NUMBER()`; drop null IDs |
+| crm_prd_info | Split `prd_key` into `cat_id` and `prd_key`; cost `NULL` to 0; decode product line; `CONVERT(DATE, ..., 105)` for dd-mm-yyyy dates; derive `prd_end_dt` with `LEAD()` minus one day |
+| crm_sales_details | Invalid integer dates to `NULL`; recalculate sales when missing, negative or not equal to quantity × price; derive missing price |
+| erp_cust_az12 | Strip `NAS` prefix from IDs; future birthdates to `NULL`; standardise gender |
+| erp_loc_a101 | Remove hyphens from IDs; map `US`/`USA` to United States and `DE` to Germany; blanks to `n/a` |
+| erp_px_cat_g1v2 | `TRIM` all columns |
+
+Join keys and the full flow are in [`docs/data_flow.md`](docs/data_flow.md).
+
+## How to run
+
+1. Run `scripts/init_database.sql`. **Warning:** it drops and recreates the `DataWarehouse` database.
+2. Run `scripts/bronze/ddl_bronze.sql`, then `scripts/bronze/proc_load_bronze.sql`.
+3. Change the `D:\...` file paths in `proc_load_bronze.sql` to where the `datasets/` folder is on your machine.
+4. Run `scripts/silver/ddl_silver.sql`, then `scripts/silver/proc_load_silver.sql`.
+5. Load the data:
 
 ```sql
-/*
-===============================================================================
-Create Database and Schemas
-===============================================================================
-Script Purpose:
-    This script creates a new database named 'DataWarehouse' after checking if it already exists.
-    If the database exists, it is dropped and recreated. Additionally, the script sets up three schemas
-    within the database: 'bronze', 'silver', and 'gold'.
+EXEC bronze.load_bronze;
+EXEC silver.load_silver;
+```
 
-WARNING:
-    Running this script will drop the entire 'DataWarehouse' database if it exists.
-    All data in the database will be permanently deleted. Proceed with caution
-    and ensure you have proper backups before running this script.
-*/
+## Repository structure
+
+```
+datasets/
+  source_crm/        cust_info.csv, prd_info.csv, sales_details.csv
+  source_erp/        CUST_AZ12.csv, LOC_A101.csv, PX_CAT_G1V2.csv
+docs/
+  data_flow.png      Pipeline diagram
+  data_flow.md       Mermaid diagram and join keys
+scripts/
+  init_database.sql
+  bronze/            ddl_bronze.sql, proc_load_bronze.sql
+  silver/            ddl_silver.sql, proc_load_silver.sql, silver_transformations.sql
+tests/
+```
+
+## Next steps
+
+- Gold layer views: `dim_customers`, `dim_products`, `fact_sales`
+- Data quality check scripts in `tests/`
+- Power BI report on the Gold layer
+
+## License
+
+MIT, see [LICENSE](LICENSE).
