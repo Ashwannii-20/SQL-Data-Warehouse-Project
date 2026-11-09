@@ -77,6 +77,8 @@ EXEC bronze.load_bronze;
 EXEC silver.load_silver;
 ```
 
+6. Run `tests/quality_checks_silver.sql`. Each query says what result to expect; most should return no rows.
+
 ## Repository structure
 
 ```
@@ -91,12 +93,12 @@ scripts/
   bronze/            ddl_bronze.sql, proc_load_bronze.sql
   silver/            ddl_silver.sql, proc_load_silver.sql, silver_transformations.sql
 tests/
+  quality_checks_silver.sql   Checks to run after the Silver load
 ```
 
 ## Next steps
 
 - Gold layer views: `dim_customers`, `dim_products`, `fact_sales`
-- Data quality check scripts in `tests/`
 - Power BI report on the Gold layer
 
 ## License
