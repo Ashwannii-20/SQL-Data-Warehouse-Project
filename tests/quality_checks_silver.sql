@@ -140,6 +140,22 @@ SELECT DISTINCT cat, subcat FROM silver.erp_px_cat_g1v2;
 SELECT DISTINCT maintenance FROM silver.erp_px_cat_g1v2;
 
 -- ====================================================================
+-- Hidden characters (carriage return from Windows line endings)
+-- The last column of each CSV is where CHAR(13) would land. Expect: all 0
+-- ====================================================================
+SELECT 'erp_cust_az12.gen' AS col, COUNT(*) AS bad_rows
+FROM silver.erp_cust_az12
+WHERE gen LIKE '%' + CHAR(13) + '%' OR gen != TRIM(gen)
+UNION ALL
+SELECT 'erp_loc_a101.cntry', COUNT(*)
+FROM silver.erp_loc_a101
+WHERE cntry LIKE '%' + CHAR(13) + '%' OR cntry != TRIM(cntry)
+UNION ALL
+SELECT 'erp_px_cat_g1v2.maintenance', COUNT(*)
+FROM silver.erp_px_cat_g1v2
+WHERE maintenance LIKE '%' + CHAR(13) + '%' OR maintenance != TRIM(maintenance);
+
+-- ====================================================================
 -- Cross-system key checks (do the Gold joins work?)
 -- ====================================================================
 

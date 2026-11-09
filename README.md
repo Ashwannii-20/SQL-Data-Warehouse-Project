@@ -39,6 +39,7 @@ The files are in [`datasets/`](datasets/). The sample CRM/ERP data comes from th
 - Missing or negative prices and sales amounts that don't equal quantity × price
 - Impossible birthdates (for example `9999-11-20`)
 - Different customer ID formats between CRM and ERP
+- ERP gender came through as all `n/a`/NULL on one load; the Silver gender rule now strips any hidden carriage return (`CHAR(13)`) before mapping, and `tests/quality_checks_silver.sql` checks every last CSV column for it
 
 ## Bronze layer
 
@@ -58,7 +59,7 @@ The files are in [`datasets/`](datasets/). The sample CRM/ERP data comes from th
 | crm_cust_info | `TRIM` text; decode marital status and gender; keep the latest record per customer with `ROW_NUMBER()`; drop null IDs |
 | crm_prd_info | Split `prd_key` into `cat_id` and `prd_key`; cost `NULL` to 0; decode product line; `CONVERT(DATE, ..., 105)` for dd-mm-yyyy dates; derive `prd_end_dt` with `LEAD()` minus one day |
 | crm_sales_details | Invalid integer dates to `NULL`; recalculate sales when missing, negative or not equal to quantity × price; derive missing price |
-| erp_cust_az12 | Strip `NAS` prefix from IDs; future birthdates to `NULL`; standardise gender |
+| erp_cust_az12 | Strip `NAS` prefix from IDs; cast birthdate to `DATE`, future dates to `NULL`; remove `CHAR(13)` and standardise gender |
 | erp_loc_a101 | Remove hyphens from IDs; map `US`/`USA` to United States and `DE` to Germany; blanks to `n/a` |
 | erp_px_cat_g1v2 | `TRIM` all columns |
 
