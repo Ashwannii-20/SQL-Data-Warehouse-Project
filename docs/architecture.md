@@ -1,5 +1,7 @@
 # Architecture
 
+![diagram](data_architecture.png)
+
 Medallion architecture on SQL Server. GitHub draws the Mermaid diagram automatically.
 
 ```mermaid

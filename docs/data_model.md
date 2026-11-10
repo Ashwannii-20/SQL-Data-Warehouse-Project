@@ -1,5 +1,7 @@
 # Gold Data Model (Star Schema)
 
+![diagram](data_model.png)
+
 One fact table and two dimensions. Each dimension has an integer surrogate key (`_key`) made with `ROW_NUMBER()`, plus the source business key (`_number`).
 
 **Grain of `fact_sales`:** one row per order line (`order_number` + `product_key`).

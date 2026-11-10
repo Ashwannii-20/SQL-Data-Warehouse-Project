@@ -4,7 +4,7 @@
 
 A data warehouse built in **Microsoft SQL Server** using the **Medallion Architecture** (Bronze, Silver, Gold). It combines sales data from two separate source systems, a CRM and an ERP, into one clean model for reporting.
 
-![Data flow](docs/data_flow.png)
+![Data architecture](docs/data_architecture.png)
 
 ## Status
 
@@ -63,11 +63,15 @@ The files are in [`datasets/`](datasets/). The sample CRM/ERP data comes from th
 | erp_loc_a101 | Remove hyphens from IDs; map `US`/`USA` to United States and `DE` to Germany; blanks to `n/a` |
 | erp_px_cat_g1v2 | `TRIM` all columns |
 
+![Data flow](docs/data_flow.png)
+
 Join keys and the full flow are in [`docs/data_flow.md`](docs/data_flow.md). The layer design is in [`docs/architecture.md`](docs/architecture.md).
 
 ## Gold layer: star schema
 
 `fact_sales` (one row per order line) links to `dim_customers` and `dim_products` by integer surrogate keys made with `ROW_NUMBER()`. `dim_customers` joins the CRM customer to both ERP tables; gender comes from the CRM, and from the ERP when the CRM has `n/a`. `dim_products` keeps only current products. Full model: [`docs/data_model.md`](docs/data_model.md).
+
+![Star schema](docs/data_model.png)
 
 ## How to run
 
@@ -93,7 +97,9 @@ datasets/
   source_crm/        cust_info.csv, prd_info.csv, sales_details.csv
   source_erp/        CUST_AZ12.csv, LOC_A101.csv, PX_CAT_G1V2.csv
 docs/
+  data_architecture.png  Medallion architecture
   data_flow.png      Pipeline diagram
+  data_model.png     Star schema
   data_flow.md       Mermaid diagram and join keys
   architecture.md    Medallion layer design
   data_model.md      Gold star schema
