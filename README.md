@@ -10,8 +10,8 @@ A data warehouse built in **Microsoft SQL Server** using the **Medallion Archite
 
 | Layer | Status | What it does |
 |---|---|---|
-| Bronze | Done | Loads the 6 raw CSV files exactly as received |
-| Silver | Done | Cleans, standardises and aligns keys across CRM and ERP |
+| Bronze | Implemented | Loads the 6 raw CSV files into raw NVARCHAR columns |
+| Silver | Implemented | Cleans, standardises and aligns keys across CRM and ERP; rerun and validate after the latest fixes |
 | Gold | Built | Star schema views: `dim_customers`, `dim_products`, `fact_sales` |
 
 ## Source data
@@ -67,7 +67,7 @@ The files are in [`datasets/`](datasets/). The sample CRM/ERP data comes from th
 
 ![Data flow](docs/data_flow.png)
 
-Join keys and the full flow are in [`docs/data_flow.md`](docs/data_flow.md). The layer design is in [`docs/architecture.md`](docs/architecture.md).
+Join keys and the full flow are in [`docs/data_flow.md`](docs/data_flow.md). The layer design is in [`docs/architecture.md`](docs/architecture.md). Interview explanations and design trade-offs are in [`docs/interview_guide.md`](docs/interview_guide.md).
 
 ## Gold layer: star schema
 
@@ -102,6 +102,7 @@ docs/
   data_flow.md       Mermaid diagram and join keys
   architecture.md    Medallion layer design
   data_model.md      Gold star schema
+  interview_guide.md Interview explanation and design trade-offs
 scripts/
   00_init_database.sql
   01_bronze_create_tables.sql
