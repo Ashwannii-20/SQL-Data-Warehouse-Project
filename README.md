@@ -78,7 +78,7 @@ Join keys and the full flow are in [`docs/data_flow.md`](docs/data_flow.md). The
 ## How to run
 
 1. Run `scripts/00_init_database.sql` once. **Warning:** it drops and recreates the `DataWarehouse` database.
-2. Change the `D:\...` file paths in steps 2 and 6 to where the `datasets/` folder is on your machine.
+2. Change the `D:\Data warehouse\sql-data-warehouse-project\datasets\...` file paths in steps 2 and 6 if your repository is stored elsewhere. `BULK INSERT` reads files from the SQL Server machine, so its service account must have access to the dataset folder.
 3. Run steps 01 to 07 in order. Every file starts with `USE DataWarehouse;`.
 4. After that, a full reload is:
 
