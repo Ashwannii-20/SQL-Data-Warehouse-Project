@@ -67,7 +67,7 @@ The files are in [`datasets/`](datasets/). The sample CRM/ERP data comes from th
 
 ![Data flow](docs/data_flow.png)
 
-Join keys and the full flow are in [`docs/data_flow.md`](docs/data_flow.md). The layer design is in [`docs/architecture.md`](docs/architecture.md). Gold object definitions and source-to-column mappings are in the [Gold data catalog](docs/data_catalog.md). Interview explanations and design trade-offs are in [`docs/interview_guide.md`](docs/interview_guide.md).
+Join keys and the full flow are in [`docs/data_flow.md`](docs/data_flow.md). The layer design is in [`docs/architecture.md`](docs/architecture.md). Gold object definitions and source-to-column mappings are in the [Gold data catalog](docs/data_catalog.md). Project naming rules are in [`docs/naming_conventions.md`](docs/naming_conventions.md). Interview explanations and design trade-offs are in [`docs/interview_guide.md`](docs/interview_guide.md).
 
 ## Gold layer: star schema
 
