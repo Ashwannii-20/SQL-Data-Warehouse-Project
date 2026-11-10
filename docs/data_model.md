@@ -53,7 +53,7 @@ erDiagram
 
 | Gold column | Built from | Why |
 |---|---|---|
-| `customer_key` | `ROW_NUMBER() OVER (ORDER BY cst_id)` | Warehouse-owned key (SQL Server `ROW_NUMBER()` returns `BIGINT`), independent of the CRM (SQL Server `ROW_NUMBER()` returns `BIGINT`) |
+| `customer_key` | `ROW_NUMBER() OVER (ORDER BY cst_id)` | Warehouse-owned key (SQL Server `ROW_NUMBER()` returns `BIGINT`), independent of the CRM source ID |
 | `customer_number` | `cst_key` (e.g. AW00011000) | Business key, used to join the ERP tables |
 | `product_key` | `ROW_NUMBER() OVER (ORDER BY prd_start_dt, prd_key)` | Warehouse-owned key |
 | `product_number` | `prd_key` (e.g. FR-R92B-58) | Business key, used to join sales |
