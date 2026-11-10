@@ -75,6 +75,14 @@ Join keys and the full flow are in [`docs/data_flow.md`](docs/data_flow.md). The
 
 ![Star schema](docs/data_model.png)
 
+## Project management & tracking
+
+Project planning, task tracking, implementation progress, and phase management are maintained in Notion.
+
+[View the Data Warehouse Project workspace in Notion](https://app.notion.com/p/407738eceaed8012828fe535c37759ef)
+
+*The Notion page must be shared with "Anyone on the web with link" using view-only access before external reviewers can open it.*
+
 ## How to run
 
 1. Run `scripts/00_init_database.sql` once. **Warning:** it drops and recreates the `DataWarehouse` database.
