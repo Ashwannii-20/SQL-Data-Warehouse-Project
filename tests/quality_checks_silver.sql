@@ -27,6 +27,11 @@ FROM silver.crm_cust_info
 GROUP BY cst_id
 HAVING COUNT(*) > 1 OR cst_id IS NULL;
 
+-- No blank or zero customer IDs should enter Silver. Expect: no rows
+SELECT cst_id
+FROM silver.crm_cust_info
+WHERE cst_id = 0;
+
 -- Unwanted spaces. Expect: no rows
 SELECT cst_key, cst_firstname, cst_lastname
 FROM silver.crm_cust_info
@@ -77,27 +82,31 @@ FROM silver.crm_prd_info;
 -- Order date after ship or due date. Expect: no rows
 SELECT sls_ord_num, sls_order_dt, sls_ship_dt, sls_due_dt
 FROM silver.crm_sales_details
-WHERE sls_order_dt > sls_ship_dt
-   OR sls_order_dt > sls_due_dt;
+WHERE (sls_order_dt IS NOT NULL AND sls_ship_dt IS NOT NULL AND sls_order_dt > sls_ship_dt)
+   OR (sls_order_dt IS NOT NULL AND sls_due_dt IS NOT NULL AND sls_order_dt > sls_due_dt)
+   OR (sls_ship_dt IS NOT NULL AND sls_due_dt IS NOT NULL AND sls_ship_dt > sls_due_dt);
 
 -- Dates outside a sensible range. Expect: no rows
 SELECT sls_ord_num, sls_order_dt, sls_ship_dt, sls_due_dt
 FROM silver.crm_sales_details
-WHERE sls_order_dt NOT BETWEEN '1900-01-01' AND '2050-01-01'
-   OR sls_ship_dt  NOT BETWEEN '1900-01-01' AND '2050-01-01'
-   OR sls_due_dt   NOT BETWEEN '1900-01-01' AND '2050-01-01';
+WHERE (sls_order_dt IS NOT NULL AND sls_order_dt NOT BETWEEN '19000101' AND '20500101')
+   OR (sls_ship_dt IS NOT NULL AND sls_ship_dt NOT BETWEEN '19000101' AND '20500101')
+   OR (sls_due_dt IS NOT NULL AND sls_due_dt NOT BETWEEN '19000101' AND '20500101');
 
--- Invalid order dates set to NULL. Expect: a small count (19 in the source data)
-SELECT COUNT(*) AS null_order_dates
-FROM silver.crm_sales_details
-WHERE sls_order_dt IS NULL;
+-- Invalid order dates are retained as NULL, not converted into fake dates.
+-- The source data has 19 invalid order dates. Review all three date counts.
+SELECT
+    SUM(CASE WHEN sls_order_dt IS NULL THEN 1 ELSE 0 END) AS null_order_dates,
+    SUM(CASE WHEN sls_ship_dt IS NULL THEN 1 ELSE 0 END) AS null_ship_dates,
+    SUM(CASE WHEN sls_due_dt IS NULL THEN 1 ELSE 0 END) AS null_due_dates
+FROM silver.crm_sales_details;
 
 -- Sales = quantity x price, and no null, zero or negative values. Expect: no rows
 SELECT sls_ord_num, sls_sales, sls_quantity, sls_price
 FROM silver.crm_sales_details
-WHERE sls_sales != sls_quantity * sls_price
-   OR sls_sales IS NULL OR sls_quantity IS NULL OR sls_price IS NULL
-   OR sls_sales <= 0 OR sls_quantity <= 0 OR sls_price <= 0;
+WHERE sls_sales IS NULL OR sls_quantity IS NULL OR sls_price IS NULL
+   OR sls_sales <= 0 OR sls_quantity <= 0 OR sls_price <= 0
+   OR sls_sales <> sls_quantity * sls_price;
 
 -- ====================================================================
 -- silver.erp_cust_az12
@@ -106,7 +115,7 @@ WHERE sls_sales != sls_quantity * sls_price
 -- Birthdates in the future or before 1924. Expect: no future dates; about 15 very old dates are flagged for review
 SELECT cid, bdate
 FROM silver.erp_cust_az12
-WHERE bdate > GETDATE() OR bdate < '1924-01-01';
+WHERE bdate > CAST(GETDATE() AS DATE) OR bdate < '19240101';
 
 -- Standardised gender. Expect: only Male, Female, n/a
 SELECT DISTINCT gen FROM silver.erp_cust_az12;
