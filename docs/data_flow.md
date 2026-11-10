@@ -26,7 +26,7 @@ flowchart LR
         s5[erp_loc_a101]
         s6[erp_px_cat_g1v2]
     end
-    subgraph Gold["Gold (star schema, in progress)"]
+    subgraph Gold["Gold (star schema views)"]
         g1[dim_customers]
         g2[dim_products]
         g3[fact_sales]

@@ -12,7 +12,7 @@ A data warehouse built in **Microsoft SQL Server** using the **Medallion Archite
 |---|---|---|
 | Bronze | Done | Loads the 6 raw CSV files exactly as received |
 | Silver | Done | Cleans, standardises and aligns keys across CRM and ERP |
-| Gold | In progress | Star schema views: `dim_customers`, `dim_products`, `fact_sales` |
+| Gold | Built | Star schema views: `dim_customers`, `dim_products`, `fact_sales` |
 
 ## Source data
 
@@ -63,7 +63,11 @@ The files are in [`datasets/`](datasets/). The sample CRM/ERP data comes from th
 | erp_loc_a101 | Remove hyphens from IDs; map `US`/`USA` to United States and `DE` to Germany; blanks to `n/a` |
 | erp_px_cat_g1v2 | `TRIM` all columns |
 
-Join keys and the full flow are in [`docs/data_flow.md`](docs/data_flow.md).
+Join keys and the full flow are in [`docs/data_flow.md`](docs/data_flow.md). The layer design is in [`docs/architecture.md`](docs/architecture.md).
+
+## Gold layer: star schema
+
+`fact_sales` (one row per order line) links to `dim_customers` and `dim_products` by integer surrogate keys made with `ROW_NUMBER()`. `dim_customers` joins the CRM customer to both ERP tables; gender comes from the CRM, and from the ERP when the CRM has `n/a`. `dim_products` keeps only current products. Full model: [`docs/data_model.md`](docs/data_model.md).
 
 ## How to run
 
@@ -79,6 +83,8 @@ EXEC silver.load_silver;
 ```
 
 6. Run `tests/quality_checks_silver.sql`. Each query says what result to expect; most should return no rows.
+7. Run `scripts/gold/ddl_gold.sql` to create the Gold views.
+8. Run `tests/quality_checks_gold.sql`.
 
 ## Repository structure
 
@@ -89,17 +95,20 @@ datasets/
 docs/
   data_flow.png      Pipeline diagram
   data_flow.md       Mermaid diagram and join keys
+  architecture.md    Medallion layer design
+  data_model.md      Gold star schema
 scripts/
   init_database.sql
   bronze/            ddl_bronze.sql, proc_load_bronze.sql
   silver/            ddl_silver.sql, proc_load_silver.sql, silver_transformations.sql
+  gold/              ddl_gold.sql
 tests/
   quality_checks_silver.sql   Checks to run after the Silver load
+  quality_checks_gold.sql     Checks to run after creating the Gold views
 ```
 
 ## Next steps
 
-- Gold layer views: `dim_customers`, `dim_products`, `fact_sales`
 - Power BI report on the Gold layer
 
 ## License
