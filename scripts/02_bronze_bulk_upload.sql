@@ -5,6 +5,10 @@
 USE DataWarehouse;
 GO
 
+SET XACT_ABORT ON;
+BEGIN TRY
+    BEGIN TRANSACTION;
+
 -- CRM files
 TRUNCATE TABLE bronze.crm_cust_info;
 BULK INSERT bronze.crm_cust_info
@@ -36,6 +40,15 @@ TRUNCATE TABLE bronze.erp_px_cat_g1v2;
 BULK INSERT bronze.erp_px_cat_g1v2
 FROM 'D:\Data warehouse\sql-data-warehouse-project\01_datasets\source_erp\PX_CAT_G1V2.csv'
 WITH (FIRSTROW = 2, FIELDTERMINATOR = ',', ROWTERMINATOR = '\n');
+
+    COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF @@TRANCOUNT > 0
+        ROLLBACK TRANSACTION;
+    THROW;
+END CATCH;
+GO
 
 -- Row check
 SELECT 'crm_cust_info' AS tbl, COUNT(*) AS rows_ FROM bronze.crm_cust_info
