@@ -94,6 +94,18 @@ FROM gold.dim_products
 GROUP BY product_key
 HAVING COUNT(*) > 1;
 
+-- Business keys must also be unique at the dimension grain.
+-- Expected: both queries return no rows.
+SELECT customer_id, COUNT(*) AS duplicate_count
+FROM gold.dim_customers
+GROUP BY customer_id
+HAVING COUNT(*) > 1;
+
+SELECT product_number, COUNT(*) AS duplicate_count
+FROM gold.dim_products
+GROUP BY product_number
+HAVING COUNT(*) > 1;
+
 
 -- =====================================================================
 -- 4. Product dimension checks.
@@ -173,8 +185,8 @@ FROM gold.fact_sales;
 -- =====================================================================
 -- 8. Sales calculation and value checks.
 -- Expected: no rows.
--- Checks sales = quantity * price, positive quantity, and nonnegative
--- price and sales amount.
+-- Checks sales = quantity * price and requires positive quantity, price,
+-- and sales amount, consistent with the Silver-layer validation rules.
 -- =====================================================================
 
 SELECT
@@ -187,8 +199,8 @@ WHERE sales_amount IS NULL
    OR quantity IS NULL
    OR price IS NULL
    OR quantity <= 0
-   OR price < 0
-   OR sales_amount < 0
+   OR price <= 0
+   OR sales_amount <= 0
    OR sales_amount <> quantity * price;
 
 
