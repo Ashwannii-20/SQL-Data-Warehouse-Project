@@ -21,7 +21,7 @@ A data warehouse built in **Microsoft SQL Server** using the **Medallion Archite
 | CRM | `cust_info.csv` | Customers: name, marital status, gender, created date | 18,493 |
 | CRM | `prd_info.csv` | Products: key, name, cost, product line, start date | 397 |
 | CRM | `sales_details.csv` | Sales orders: dates, quantity, price, sales amount | 60,398 |
-| ERP | `CUST_AZ12.csv` | Customer birthdate and gender | 18,483 |
+| ERP | `CUST_AZ12.csv` | Customer birthdate and gender | 18,484 |
 | ERP | `LOC_A101.csv` | Customer country | 18,484 |
 | ERP | `PX_CAT_G1V2.csv` | Product category, subcategory, maintenance flag | 36 |
 
