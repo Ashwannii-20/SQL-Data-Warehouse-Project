@@ -12,7 +12,7 @@ A data warehouse built in **Microsoft SQL Server** using the **Medallion Archite
 |---|---|---|
 | Bronze | Implemented | Loads the 6 raw CSV files into raw NVARCHAR columns |
 | Silver | Implemented | Cleans, standardises and aligns keys across CRM and ERP; rerun and validate after the latest fixes |
-| Gold | Built | Star schema views: `dim_customers`, `dim_products`, `fact_sales` |
+| Gold | Validated (known exceptions documented) | Star schema views: `dim_customers`, `dim_products`, `fact_sales`; Gold quality checks executed successfully |
 
 ## Source data
 
