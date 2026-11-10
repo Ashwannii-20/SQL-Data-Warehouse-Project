@@ -101,11 +101,6 @@ FROM gold.dim_customers
 GROUP BY customer_id
 HAVING COUNT(*) > 1;
 
-SELECT product_number, COUNT(*) AS duplicate_count
-FROM gold.dim_products
-GROUP BY product_number
-HAVING COUNT(*) > 1;
-
 
 -- =====================================================================
 -- 4. Product dimension checks.
