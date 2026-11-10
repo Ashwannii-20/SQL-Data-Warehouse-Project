@@ -2,7 +2,7 @@
 
 ![diagram](data_model.png)
 
-One fact table and two dimensions. Each dimension has an integer surrogate key (`_key`) made with `ROW_NUMBER()`, plus the source business key (`_number`).
+One fact table and two dimensions. Each dimension has a `BIGINT` surrogate key (`_key`) made with `ROW_NUMBER()` in SQL Server, plus the source business key (`_number`).
 
 **Grain of `fact_sales`:** one row per order line (`order_number` + `product_key`).
 
@@ -12,7 +12,7 @@ erDiagram
     dim_products  ||--o{ fact_sales : "product_key"
 
     dim_customers {
-        INT customer_key PK
+        BIGINT customer_key PK
         INT customer_id
         NVARCHAR customer_number
         NVARCHAR first_name
@@ -24,7 +24,7 @@ erDiagram
         DATE create_date
     }
     dim_products {
-        INT product_key PK
+        BIGINT product_key PK
         INT product_id
         NVARCHAR product_number
         NVARCHAR product_name
@@ -38,8 +38,8 @@ erDiagram
     }
     fact_sales {
         NVARCHAR order_number
-        INT product_key FK
-        INT customer_key FK
+        BIGINT product_key FK
+        BIGINT customer_key FK
         DATE order_date
         DATE shipping_date
         DATE due_date
@@ -53,7 +53,7 @@ erDiagram
 
 | Gold column | Built from | Why |
 |---|---|---|
-| `customer_key` | `ROW_NUMBER() OVER (ORDER BY cst_id)` | Warehouse-owned key, independent of the CRM |
+| `customer_key` | `ROW_NUMBER() OVER (ORDER BY cst_id)` | Warehouse-owned key (SQL Server `ROW_NUMBER()` returns `BIGINT`), independent of the CRM (SQL Server `ROW_NUMBER()` returns `BIGINT`) |
 | `customer_number` | `cst_key` (e.g. AW00011000) | Business key, used to join the ERP tables |
 | `product_key` | `ROW_NUMBER() OVER (ORDER BY prd_start_dt, prd_key)` | Warehouse-owned key |
 | `product_number` | `prd_key` (e.g. FR-R92B-58) | Business key, used to join sales |
