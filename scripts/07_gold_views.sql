@@ -1,16 +1,10 @@
-/*
-===============================================================================
-DDL Script: Create Gold Views
-===============================================================================
-Purpose:
-    Creates the Gold layer views (star schema): dim_customers, dim_products
-    and fact_sales. The views read the Silver tables at query time, so there
-    is no load step for Gold.
+-- Step 7: Gold layer (star schema views)
+-- dim_customers = CRM customer + ERP birthdate/gender + ERP country
+-- dim_products  = current products only + ERP category
+-- fact_sales    = sales linked to both dimensions by surrogate keys
 
-Run after:
-    EXEC silver.load_silver;
-===============================================================================
-*/
+USE DataWarehouse;
+GO
 
 -- =============================================================================
 -- Dimension: gold.dim_customers

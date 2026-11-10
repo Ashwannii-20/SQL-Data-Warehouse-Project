@@ -1,3 +1,10 @@
+-- Step 3: create the 6 Silver tables
+-- Same tables as Bronze but with proper types (INT, DATE).
+-- crm_prd_info gets an extra cat_id column to join the ERP category table.
+
+USE DataWarehouse;
+GO
+
 -- =====================================================================
 -- DROP EXISTING SILVER TABLES
 -- =====================================================================

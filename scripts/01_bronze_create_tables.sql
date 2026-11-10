@@ -1,3 +1,10 @@
+-- Step 1: create the 6 Bronze tables
+-- All columns are NVARCHAR(50) so every CSV row loads as it is.
+-- I convert the data types later in Silver.
+
+USE DataWarehouse;
+GO
+
 -- =====================================================================
 -- CRM SYSTEM TABLES (BRONZE)
 -- =====================================================================

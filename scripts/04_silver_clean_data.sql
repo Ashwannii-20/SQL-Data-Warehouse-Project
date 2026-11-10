@@ -1,5 +1,13 @@
--- Silver layer: cleaning and standardisation queries for the 6 Bronze tables
+-- Step 4: clean the data, one table at a time
+-- These are only SELECTs on Bronze. Run each one and check the output
+-- before it goes into the INSERT in step 5.
+
+USE DataWarehouse;
+GO
+
 -- 1. crm_cust_info
+-- Problems: spaces in names, M/S and M/F codes, duplicate and NULL cst_id.
+-- Keep the latest row per customer.
 SELECT
     cst_id,
     TRIM(cst_key) AS cst_key,
@@ -26,6 +34,8 @@ FROM (
 WHERE flag_last = 1;
 
 -- 2. crm_prd_info
+-- Problems: prd_key holds the category too, NULL cost, dd-mm-yyyy dates,
+-- end dates that overlap. End date = next start date minus 1 day.
 SELECT 
     prd_id,
     REPLACE(SUBSTRING(TRIM(prd_key), 1, 5), '-', '_') AS cat_id,
@@ -44,6 +54,8 @@ SELECT
 FROM bronze.crm_prd_info;
 
 -- 3. crm_sales_details
+-- Problems: dates stored as numbers (some 0 or wrong length),
+-- sales not equal to quantity * price, missing or negative price.
 SELECT 
     TRIM(sls_ord_num) AS sls_ord_num,
     TRIM(sls_prd_key) AS sls_prd_key,
@@ -57,9 +69,11 @@ SELECT
 FROM bronze.crm_sales_details;
 
 -- 4. erp_cust_az12
+-- Problems: cid has an extra NAS prefix, future birthdates,
+-- gender as Male/Female and M/F with a hidden carriage return CHAR(13).
 SELECT
     CASE WHEN TRIM(cid) LIKE 'NAS%' THEN SUBSTRING(TRIM(cid), 4, LEN(TRIM(cid))) ELSE TRIM(cid) END AS cid,
-    CASE WHEN CAST(bdate AS DATE) > GETDATE() THEN NULL ELSE bdate END AS bdate,
+    CASE WHEN CAST(bdate AS DATE) > GETDATE() THEN NULL ELSE CAST(bdate AS DATE) END AS bdate,
     CASE 
         WHEN UPPER(TRIM(REPLACE(gen, CHAR(13), ''))) IN ('F', 'FEMALE') THEN 'Female' 
         WHEN UPPER(TRIM(REPLACE(gen, CHAR(13), ''))) IN ('M', 'MALE') THEN 'Male' 
@@ -68,6 +82,7 @@ SELECT
 FROM bronze.erp_cust_az12;
 
 -- 5. erp_loc_a101
+-- Problems: cid has a hyphen, country written as US/USA/DE or blank.
 SELECT 
     REPLACE(TRIM(cid), '-', '') AS cid,
     CASE 
@@ -79,6 +94,7 @@ SELECT
 FROM bronze.erp_loc_a101;
 
 -- 6. erp_px_cat_g1v2
+-- Data is clean, only TRIM.
 SELECT 
     TRIM(id) AS id,
     TRIM(cat) AS cat,

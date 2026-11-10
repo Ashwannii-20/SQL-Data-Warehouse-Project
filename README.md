@@ -25,7 +25,7 @@ A data warehouse built in **Microsoft SQL Server** using the **Medallion Archite
 | ERP | `LOC_A101.csv` | Customer country | 18,484 |
 | ERP | `PX_CAT_G1V2.csv` | Product category, subcategory, maintenance flag | 36 |
 
-The files are in [`datasets/`](datasets/). The sample CRM/ERP data comes from the public "SQL Data Warehouse Project" course by Data With Baraa. The cleaning rules, fixes and documentation here are my own.
+The files are in [`datasets/`](datasets/). The sample CRM/ERP data comes from the public "SQL Data Warehouse Project" course by Data With Baraa. Built with AI assistance; the cleaning rules and SQL logic are my own.
 
 ## Data profiling: issues found
 
@@ -41,16 +41,18 @@ The files are in [`datasets/`](datasets/). The sample CRM/ERP data comes from th
 - Different customer ID formats between CRM and ERP
 - ERP gender came through as all `n/a`/NULL on one load; the Silver gender rule now strips any hidden carriage return (`CHAR(13)`) before mapping, and `tests/quality_checks_silver.sql` checks every last CSV column for it
 
-## Bronze layer
+## How I built it
 
-- **`scripts/bronze/ddl_bronze.sql`** creates 6 tables with every column as `NVARCHAR(50)`, so no raw row fails to load. Type conversion happens in Silver.
-- **`scripts/bronze/proc_load_bronze.sql`** creates `bronze.load_bronze`, which truncates each table and runs `BULK INSERT` from the CSV files. It prints the load time per table and for the whole batch, and uses `TRY...CATCH` with `THROW` so failures are visible.
-
-## Silver layer
-
-- **`scripts/silver/ddl_silver.sql`** creates 6 typed tables (`INT`, `DATE`), with a new `cat_id` column on products.
-- **`scripts/silver/proc_load_silver.sql`** creates `silver.load_silver` (truncate, then `INSERT INTO ... SELECT`), with the same timing and error handling.
-- **`scripts/silver/silver_transformations.sql`** has the cleaning queries on their own, for testing.
+| Step | File | What it does |
+|---|---|---|
+| 0 | `scripts/00_init_database.sql` | Creates the `DataWarehouse` database and the bronze, silver and gold schemas |
+| 1 | `scripts/01_bronze_create_tables.sql` | Creates the 6 Bronze tables, every column `NVARCHAR(50)` so no raw row fails to load |
+| 2 | `scripts/02_bronze_bulk_upload.sql` | `BULK INSERT` of the 6 CSV files into Bronze |
+| 3 | `scripts/03_silver_create_tables.sql` | Creates the 6 typed Silver tables (`INT`, `DATE`), plus `cat_id` on products |
+| 4 | `scripts/04_silver_clean_data.sql` | Cleaning `SELECT`s on Bronze, one per table, with the problems found |
+| 5 | `scripts/05_silver_insert_tables.sql` | `TRUNCATE` + `INSERT INTO ... SELECT`, one table at a time |
+| 6 | `scripts/06_load_procedures.sql` | Wraps steps 2 and 5 in `bronze.load_bronze` and `silver.load_silver` (load times, `TRY...CATCH` with `THROW`) |
+| 7 | `scripts/07_gold_views.sql` | Star schema views: `dim_customers`, `dim_products`, `fact_sales` |
 
 **Transformations applied**
 
@@ -75,20 +77,17 @@ Join keys and the full flow are in [`docs/data_flow.md`](docs/data_flow.md). The
 
 ## How to run
 
-1. Run `scripts/init_database.sql`. **Warning:** it drops and recreates the `DataWarehouse` database.
-2. Run `scripts/bronze/ddl_bronze.sql`, then `scripts/bronze/proc_load_bronze.sql`.
-3. Change the `D:\...` file paths in `proc_load_bronze.sql` to where the `datasets/` folder is on your machine.
-4. Run `scripts/silver/ddl_silver.sql`, then `scripts/silver/proc_load_silver.sql`.
-5. Load the data:
+1. Run `scripts/00_init_database.sql` once. **Warning:** it drops and recreates the `DataWarehouse` database.
+2. Change the `D:\...` file paths in steps 2 and 6 to where the `datasets/` folder is on your machine.
+3. Run steps 01 to 07 in order. Every file starts with `USE DataWarehouse;`.
+4. After that, a full reload is:
 
 ```sql
 EXEC bronze.load_bronze;
 EXEC silver.load_silver;
 ```
 
-6. Run `tests/quality_checks_silver.sql`. Each query says what result to expect; most should return no rows.
-7. Run `scripts/gold/ddl_gold.sql` to create the Gold views.
-8. Run `tests/quality_checks_gold.sql`.
+5. Run `tests/quality_checks_silver.sql` and `tests/quality_checks_gold.sql`. Each query says what result to expect; most should return no rows.
 
 ## Repository structure
 
@@ -104,10 +103,14 @@ docs/
   architecture.md    Medallion layer design
   data_model.md      Gold star schema
 scripts/
-  init_database.sql
-  bronze/            ddl_bronze.sql, proc_load_bronze.sql
-  silver/            ddl_silver.sql, proc_load_silver.sql, silver_transformations.sql
-  gold/              ddl_gold.sql
+  00_init_database.sql
+  01_bronze_create_tables.sql
+  02_bronze_bulk_upload.sql
+  03_silver_create_tables.sql
+  04_silver_clean_data.sql
+  05_silver_insert_tables.sql
+  06_load_procedures.sql
+  07_gold_views.sql
 tests/
   quality_checks_silver.sql   Checks to run after the Silver load
   quality_checks_gold.sql     Checks to run after creating the Gold views

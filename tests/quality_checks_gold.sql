@@ -2,7 +2,7 @@
 ===============================================================================
 Quality Checks: Gold Layer
 ===============================================================================
-Run after scripts/gold/ddl_gold.sql. Each check says what result to expect.
+Run after scripts/07_gold_views.sql. Each check says what result to expect.
 ===============================================================================
 */
 
