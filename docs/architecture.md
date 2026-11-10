@@ -6,39 +6,47 @@ Medallion architecture on SQL Server. GitHub draws the Mermaid diagram automatic
 
 ```mermaid
 flowchart LR
-    subgraph SRC["Sources"]
+    subgraph SRC["Data Sources"]
         direction TB
-        src["📁 CRM<br/>📁 ERP<br/><br/>Object Type: CSV Files"]
+        crm["📁 CRM Source<br/>3 CSV files"]
+        erp["📁 ERP Source<br/>3 CSV files"]
     end
 
-    subgraph DWH["Data Warehouse - SQL Server"]
-        direction LR
-        bronze["<b>Bronze Layer</b><br/>🛢️ Raw Data<br/><br/>Object Type: Tables<br/><br/>Load:<br/>• Batch Processing<br/>• Full Load<br/>• Truncate & Insert<br/><br/>No Transformations<br/><br/>Data Model: None (as-is)"]
-        silver["<b>Silver Layer</b><br/>🛢️ Cleaned, Standardized Data<br/><br/>Object Type: Tables<br/><br/>Load:<br/>• Batch Processing<br/>• Full Load<br/>• Truncate & Insert<br/><br/>Transformations:<br/>• Data Cleansing<br/>• Data Standardization<br/>• Data Normalization<br/>• Derived Columns<br/>• Data Enrichment<br/><br/>Data Model: None (as-is)"]
-        gold["<b>Gold Layer</b><br/>🛢️ Business-Ready Data<br/><br/>Object Type: Views<br/><br/>No Load<br/><br/>Transformations:<br/>• Data Integration<br/>• Business Logic<br/><br/>Data Model: Star Schema"]
-        bronze -- "silver.load_silver<br/>(stored procedure)" --> silver
-        silver -- "views<br/>(no load)" --> gold
+    subgraph BR["Bronze Layer - Raw Data"]
+        bronze["Tables<br/>All columns NVARCHAR<br/>No transformations<br/><br/>Load: Truncate + BULK INSERT"]
     end
 
-    subgraph CON["Consume"]
-        direction TB
-        con["📊 BI & Reporting<br/><br/>🔍 Ad-Hoc SQL Queries<br/><br/>🕸️ Machine Learning"]
+    subgraph SV["Silver Layer - Cleaned Data"]
+        silver["Tables<br/>Typed columns (INT, DATE)<br/>Cleaning, standardising,<br/>derived columns, key alignment<br/><br/>Load: Truncate + INSERT ... SELECT"]
     end
 
-    src -- "bronze.load_bronze<br/>(BULK INSERT)" --> bronze
-    gold --> con
+    subgraph GD["Gold Layer - Star Schema"]
+        gold["Views (no load)<br/>dim_customers<br/>dim_products<br/>fact_sales"]
+    end
 
-    classDef bronzeStyle fill:#fae5d3,stroke:#d35400,stroke-width:2px,color:#000
-    classDef silverStyle fill:#ebedef,stroke:#7f8c8d,stroke-width:2px,color:#000
-    classDef goldStyle fill:#fcf3cf,stroke:#f1c40f,stroke-width:2px,color:#000
-    classDef plain fill:#fff,stroke:#fff,color:#000
-    class bronze bronzeStyle
-    class silver silverStyle
-    class gold goldStyle
-    class src,con plain
-    style SRC fill:#fff,stroke:#ccc,stroke-dasharray:5 5
-    style DWH fill:#fff,stroke:#ccc,stroke-dasharray:5 5
-    style CON fill:#fff,stroke:#ccc,stroke-dasharray:5 5
+    subgraph US["Use"]
+        use["BI & Reporting<br/>Ad-hoc SQL"]
+    end
+
+    crm -- "bronze.load_bronze" --> bronze
+    erp -- "bronze.load_bronze" --> bronze
+    bronze -- "silver.load_silver" --> silver
+    silver -- "CREATE VIEW" --> gold
+    gold --> use
+
+    classDef crmS fill:#e8f1fd,stroke:#2f6fd6,color:#000
+    classDef erpS fill:#fdf0e6,stroke:#d9662b,color:#000
+    classDef box fill:#ffffff,stroke:#999,color:#000
+    classDef goldB fill:#fbefc4,stroke:#c9a227,color:#000
+    class crm crmS
+    class erp erpS
+    class bronze,silver,use box
+    class gold goldB
+    style SRC fill:#fdf2fd,stroke:#d58ee0
+    style BR fill:#ecfcfa,stroke:#4fc9c0
+    style SV fill:#eefbef,stroke:#6ccf7f
+    style GD fill:#fefbe8,stroke:#e8d26a
+    style US fill:#ffffff,stroke:#bbb,stroke-dasharray:5 5
 ```
 
 ## Layers
