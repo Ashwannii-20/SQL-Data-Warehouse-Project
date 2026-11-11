@@ -1,134 +1,180 @@
 # SQL Data Warehouse Project
 
-**Author:** Ashwani Tripathi
+**Author:** Ashwani Tripathi  
+**Platform:** Microsoft SQL Server | **Language:** T-SQL  
+**Architecture:** Medallion (Bronze, Silver, Gold)
 
-A data warehouse built in **Microsoft SQL Server** using the **Medallion Architecture** (Bronze, Silver, Gold). It combines sales data from two separate source systems, a CRM and an ERP, into one clean model for reporting.
+## Project overview
+
+This project demonstrates the design and implementation of a SQL-based data warehouse using data from two operational source systems: Customer Relationship Management (CRM) and Enterprise Resource Planning (ERP).
+
+The warehouse consolidates raw source data, applies cleansing and standardisation, integrates related entities across systems, and publishes structured analytical data through a Gold-layer star schema.
+
+The objective is to build a reliable, documented and quality-checked data foundation that downstream teams can use for analysis, reporting and business intelligence.
 
 ![Data architecture](docs/data_architecture.png)
 
-## Status
+## Business purpose and intended users
 
-| Layer | Status | What it does |
+In organisations, operational data is often spread across multiple systems and may not be consistent or ready for analysis. This project demonstrates how a data engineering workflow can bring those sources together and make the resulting data more dependable for analytical use.
+
+The warehouse is designed to provide a central analytical data source for:
+
+- **Data Analysts** — query integrated, trusted data and investigate business performance.
+- **BI Analysts and BI Developers** — build reports, dashboards and semantic models using curated warehouse views.
+- **Business and Finance Analysts** — analyse sales, customers, products and business trends.
+- **Reporting and Analytics Teams** — reuse consistent datasets and business definitions instead of repeatedly preparing raw files.
+
+This repository focuses on the **SQL data engineering and data warehouse layer**. Tools such as Power BI, Tableau or Excel may consume the Gold-layer views, but report and dashboard development is outside this project's scope.
+
+## Architecture
+
+The warehouse follows the Medallion Architecture:
+
+| Layer | Purpose | Implementation |
 |---|---|---|
-| Bronze | Implemented | Loads the 6 raw CSV files into raw NVARCHAR columns |
-| Silver | Implemented | Cleans, standardises and aligns keys across CRM and ERP; rerun and validate after the latest fixes |
-| Gold | Validated (known exceptions documented) | Star schema views: `dim_customers`, `dim_products`, `fact_sales`; Gold quality checks executed successfully |
-
-## Source data
-
-| System | File | Contents | Rows |
-|---|---|---|---:|
-| CRM | `cust_info.csv` | Customers: name, marital status, gender, created date | 18,494 |
-| CRM | `prd_info.csv` | Products: key, name, cost, product line, start date | 397 |
-| CRM | `sales_details.csv` | Sales orders: dates, quantity, price, sales amount | 60,398 |
-| ERP | `CUST_AZ12.csv` | Customer birthdate and gender | 18,483 |
-| ERP | `LOC_A101.csv` | Customer country | 18,484 |
-| ERP | `PX_CAT_G1V2.csv` | Product category, subcategory, maintenance flag | 37 |
-
-The files are in [`datasets/`](datasets/). The sample CRM/ERP data comes from the public "SQL Data Warehouse Project" course by Data With Baraa. The project uses the public sample datasets from Data With Baraa. I developed the project logic and transformation decisions, with AI assistance for some code drafting and review.
-
-## Data profiling: issues found
-
-- Leading and trailing spaces in names and keys
-- Coded values: `M`/`S` for marital status, `M`/`F` for gender, `R`/`M`/`S`/`T` for product lines
-- ERP gender written two ways (`Male`/`Female` and `M`/`F`)
-- Countries written several ways (`US`, `USA`, `United States`, `DE`, `Germany`) plus blanks
-- Duplicate and missing customer IDs
-- Product start dates in `dd-mm-yyyy` text format
-- Invalid sales dates (`0`, `5489`, `32154`) stored as integers
-- Missing or negative prices and sales amounts that don't equal quantity × price
-- Impossible birthdates (for example `9999-11-20`)
-- Different customer ID formats between CRM and ERP
-- ERP gender came through as all `n/a`/NULL on one load; the Silver gender rule now strips any hidden carriage return (`CHAR(13)`) before mapping, and `tests/quality_checks_silver.sql` checks every last CSV column for it
-
-## How I built it
-
-| Step | File | What it does |
-|---|---|---|
-| 0 | `scripts/00_init_database.sql` | Creates the `DataWarehouse` database and the bronze, silver and gold schemas |
-| 1 | `scripts/01_bronze_create_tables.sql` | Creates the 6 Bronze tables, every column `NVARCHAR(50)` so no raw row fails to load |
-| 2 | `scripts/02_bronze_bulk_upload.sql` | `BULK INSERT` of the 6 CSV files into Bronze |
-| 3 | `scripts/03_silver_create_tables.sql` | Creates the 6 typed Silver tables (`INT`, `DATE`), plus `cat_id` on products |
-| 4 | `scripts/04_silver_clean_data.sql` | Cleaning `SELECT`s on Bronze, one per table, with the problems found |
-| 5 | `scripts/05_silver_insert_tables.sql` | `TRUNCATE` + `INSERT INTO ... SELECT`, one table at a time |
-| 6 | `scripts/06_load_procedures.sql` | Wraps steps 2 and 5 in `bronze.load_bronze` and `silver.load_silver` (load times, `TRY...CATCH` with `THROW`) |
-| 7 | `scripts/07_gold_views.sql` | Star schema views: `dim_customers`, `dim_products`, `fact_sales` |
-
-**Transformations applied**
-
-| Table | Rules |
-|---|---|
-| crm_cust_info | `TRIM` text; decode marital status and gender; keep the latest record per customer with `ROW_NUMBER()`; exclude blank or invalid IDs |
-| crm_prd_info | Split `prd_key` into `cat_id` and `prd_key`; cost `NULL` to 0; decode product line; `CONVERT(DATE, ..., 105)` for dd-mm-yyyy dates; derive `prd_end_dt` with `LEAD()` minus one day |
-| crm_sales_details | Invalid integer dates to `NULL`; parse numeric fields safely; derive missing/invalid price first; then reconcile sales to quantity × price so valid sales are not lost |
-| erp_cust_az12 | Strip `NAS` prefix from IDs; cast birthdate to `DATE`, future dates to `NULL`; remove `CHAR(13)` and standardise gender |
-| erp_loc_a101 | Remove hyphens from IDs; map `US`/`USA` to United States and `DE` to Germany; blanks to `n/a` |
-| erp_px_cat_g1v2 | `TRIM` all columns |
+| **Bronze** | Preserve incoming source data in raw form | Six raw tables; source columns initially loaded as NVARCHAR |
+| **Silver** | Clean, standardise, validate and integrate data | Typed tables, cleansing rules, key standardisation and CRM/ERP alignment |
+| **Gold** | Publish business-ready analytical models | Customer and product dimensions plus a sales fact view |
 
 ![Data flow](docs/data_flow.png)
 
-Join keys and the full flow are in [`docs/data_flow.md`](docs/data_flow.md). The layer design is in [`docs/architecture.md`](docs/architecture.md). Gold object definitions and source-to-column mappings are in the [Gold data catalog](docs/data_catalog.md). Project naming rules are in [`docs/naming_conventions.md`](docs/naming_conventions.md). Interview explanations and design trade-offs are in [`docs/interview_guide.md`](docs/interview_guide.md).
+### Gold layer: star schema
 
-## Gold layer: star schema
+The Gold layer exposes three analytical views:
 
-`fact_sales` (one row per order line) links to `dim_customers` and `dim_products` by surrogate keys generated with `ROW_NUMBER()` (SQL Server returns `BIGINT`). `dim_customers` joins the CRM customer to both ERP tables; gender comes from the CRM, and from the ERP when the CRM has `n/a`. `dim_products` keeps only current products. Full model: [`docs/data_model.md`](docs/data_model.md).
+- **gold.dim_customers** — customer attributes integrated from CRM and ERP.
+- **gold.dim_products** — current product attributes enriched with ERP category information.
+- **gold.fact_sales** — sales transaction lines connected to customer and product dimensions.
+
+The fact view links to the dimensions using surrogate keys. This star-schema structure gives analysts and BI tools a consistent, understandable model to query.
 
 ![Star schema](docs/data_model.png)
 
-## Project management & tracking
+See the [data model](docs/data_model.md) and [Gold data catalogue](docs/data_catalog.md) for details.
 
-Project planning, task tracking, implementation progress, and phase management are maintained in Notion.
+## Source data
 
-[View the Data Warehouse Project workspace in Notion](https://app.notion.com/p/407738eceaed8012828fe535c37759ef)
+The project uses six CSV files representing CRM and ERP source systems.
 
-*The Notion page must be shared with "Anyone on the web with link" using view-only access before external reviewers can open it.*
+| System | File | Contents | Rows |
+|---|---|---|---:|
+| CRM | cust_info.csv | Customer name, marital status, gender and creation date | 18,494 |
+| CRM | prd_info.csv | Product key, name, cost, product line and start date | 397 |
+| CRM | sales_details.csv | Sales orders, dates, quantity, price and sales amount | 60,398 |
+| ERP | CUST_AZ12.csv | Customer birthdate and gender | 18,483 |
+| ERP | LOC_A101.csv | Customer country/location | 18,484 |
+| ERP | PX_CAT_G1V2.csv | Product category, subcategory and maintenance flag | 37 |
+
+The files are stored in [datasets/](datasets/). The sample data is based on the public SQL Data Warehouse Project learning materials by Data With Baraa. The implementation, transformation decisions, validation and documentation were developed for this repository, with AI assistance used for some code drafting and review.
+
+## Data profiling and transformation
+
+Source profiling identified issues commonly encountered when integrating operational data:
+
+- Leading and trailing spaces in text fields and keys.
+- Inconsistent coded values for marital status, gender and product lines.
+- Different representations of gender and country across source systems.
+- Missing, blank or duplicate customer identifiers.
+- Different customer ID formats between CRM and ERP.
+- Product start dates stored as text in dd-mm-yyyy format.
+- Invalid sales date values stored as integers.
+- Missing or negative prices and sales amounts that did not reconcile to quantity multiplied by price.
+- Impossible or future birthdates.
+- Hidden carriage-return characters in source data.
+
+Transformations include trimming and standardising text, mapping coded values, normalising join keys, safe date and numeric conversion, handling invalid values, deduplicating customer records, deriving product end dates and reconciling sales measures.
+
+Detailed source-to-target rules are documented in [docs/data_catalog.md](docs/data_catalog.md).
+
+## Implementation workflow
+
+| Step | SQL file | Purpose |
+|---|---|---|
+| 0 | scripts/00_init_database.sql | Creates the DataWarehouse database and Bronze, Silver and Gold schemas |
+| 1 | scripts/01_bronze_create_tables.sql | Creates the six Bronze source tables |
+| 2 | scripts/02_bronze_bulk_upload.sql | Loads the six CSV files into Bronze using BULK INSERT |
+| 3 | scripts/03_silver_create_tables.sql | Creates structured Silver tables with appropriate data types |
+| 4 | scripts/04_silver_clean_data.sql | Defines source-to-target cleansing and transformation logic |
+| 5 | scripts/05_silver_insert_tables.sql | Loads transformed data into Silver |
+| 6 | scripts/06_load_procedures.sql | Creates Bronze and Silver load procedures with error handling |
+| 7 | scripts/07_gold_views.sql | Creates the Gold analytical views |
+
+The implementation uses SQL Server and T-SQL features including BULK INSERT, TRIM, CASE, TRY_CONVERT, ROW_NUMBER(), LEAD(), joins, common table expressions, views, stored procedures and TRY...CATCH error handling.
+
+## Data quality and validation
+
+Validation is part of the warehouse workflow; successful loading alone is not treated as proof of data quality.
+
+The SQL test scripts cover:
+
+- Source-to-layer row-count reconciliation.
+- Duplicate and missing business keys.
+- Surrogate-key uniqueness.
+- Referential integrity and orphaned fact records.
+- NULL checks on important analytical columns.
+- Date sequence and date validity checks.
+- Sales amount and quantity/price consistency.
+- Negative or invalid measures.
+- Standardisation and transformation rules.
+
+Executed Gold validation results:
+
+| Validation item | Result |
+|---|---:|
+| Gold customers | 18,484 |
+| Gold current products | 295 |
+| Gold sales fact rows | 60,398 |
+| Historical products excluded from current-product dimension | 102 |
+| Duplicate sales order/product combinations | 0 |
+| Orphaned sales dimension references | 0 |
+
+### Documented source-data exceptions
+
+The validation process also identified exceptions that were retained and documented rather than silently changed:
+
+- **19 sales rows** have a NULL order date. Other key sales attributes are present; the missing source date was not fabricated.
+- **7 current products** have no matching ERP category record. The category remains NULL because the source relationship is missing.
+
+Run the checks in [tests/quality_checks_silver.sql](tests/quality_checks_silver.sql) and [tests/quality_checks_gold.sql](tests/quality_checks_gold.sql).
+
+## Documentation
+
+- [Architecture](docs/architecture.md)
+- [Data flow and join keys](docs/data_flow.md)
+- [Data model](docs/data_model.md)
+- [Data catalogue and source-to-target mappings](docs/data_catalog.md)
+- [Naming conventions](docs/naming_conventions.md)
+- [Interview guide and design trade-offs](docs/interview_guide.md)
 
 ## How to run
 
-1. Run `scripts/00_init_database.sql` once. **Warning:** it drops and recreates the `DataWarehouse` database.
-2. Change the `D:\Data warehouse\sql-data-warehouse-project\datasets\...` file paths in steps 2 and 6 if your repository is stored elsewhere. `BULK INSERT` reads files from the SQL Server machine, so its service account must have access to the dataset folder.
-3. Run steps 01 to 07 in order. Every file starts with `USE DataWarehouse;`.
-4. After that, a full reload is:
+1. Use Microsoft SQL Server and SQL Server Management Studio (SSMS).
+2. Review the dataset paths in the bulk-load and load-procedure scripts and update them to match the location accessible to the SQL Server service.
+3. Run the scripts in numerical order, from 00 through 07.
+4. Run the Silver and Gold quality-check scripts to validate the loaded data and analytical views.
 
-```sql
-EXEC bronze.load_bronze;
-EXEC silver.load_silver;
-```
+**Important:** scripts/00_init_database.sql drops and recreates the DataWarehouse database. Run it only when you intend to initialise or rebuild this project database; do not run it against a database containing data you need to keep.
 
-5. Run `tests/quality_checks_silver.sql` and `tests/quality_checks_gold.sql`. Each query says what result to expect; most should return no rows.
+For BULK INSERT to work, the SQL Server service account must be able to access the CSV files at the configured paths.
 
 ## Repository structure
 
-```
-datasets/
-  source_crm/        cust_info.csv, prd_info.csv, sales_details.csv
-  source_erp/        CUST_AZ12.csv, LOC_A101.csv, PX_CAT_G1V2.csv
-docs/
-  data_architecture.png  Medallion architecture
-  data_flow.png      Pipeline diagram
-  data_model.png     Star schema
-  data_flow.md       Mermaid diagram and join keys
-  architecture.md    Medallion layer design
-  data_model.md      Gold star schema
-  interview_guide.md Interview explanation and design trade-offs
-scripts/
-  00_init_database.sql
-  01_bronze_create_tables.sql
-  02_bronze_bulk_upload.sql
-  03_silver_create_tables.sql
-  04_silver_clean_data.sql
-  05_silver_insert_tables.sql
-  06_load_procedures.sql
-  07_gold_views.sql
-tests/
-  quality_checks_silver.sql   Checks to run after the Silver load
-  quality_checks_gold.sql     Checks to run after creating the Gold views
-```
+- **datasets/** — CRM and ERP source CSV files.
+- **docs/** — architecture, data flow, data model, catalogue, naming conventions and interview guide.
+- **scripts/** — database initialisation, Bronze and Silver loading, transformations, procedures and Gold views.
+- **tests/** — Silver and Gold data quality checks.
 
-## Next steps
+## Project management
 
-- Power BI report on the Gold layer
+Project planning, task tracking and implementation progress are maintained in [the project Notion workspace](https://app.notion.com/p/407738eceaed8012828fe535c37759ef). The Notion page must be shared with anyone who has the link using view-only access before external reviewers can open it.
+
+## Project scope
+
+This repository demonstrates a foundational SQL data engineering workflow: ingesting raw data, transforming and integrating it, modelling it for analysis, and validating the results.
+
+It provides the warehouse layer that downstream analysts and BI teams can build upon. Dashboard development, BI semantic modelling and production orchestration are separate capabilities and are not included in this project's scope.
 
 ## License
 
-MIT, see [LICENSE](LICENSE).
+MIT — see LICENSE.
