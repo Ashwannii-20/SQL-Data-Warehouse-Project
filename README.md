@@ -145,7 +145,7 @@ Run the checks in [tests/quality_checks_silver.sql](tests/quality_checks_silver.
 - [Data model](docs/data_model.md)
 - [Data catalogue and source-to-target mappings](docs/data_catalog.md)
 - [Naming conventions](docs/naming_conventions.md)
-- [Interview guide and design trade-offs](docs/interview_guide.md)
+- [Design decisions and trade-offs](docs/design_decisions.md)
 
 ## How to run
 
@@ -161,13 +161,13 @@ For BULK INSERT to work, the SQL Server service account must be able to access t
 ## Repository structure
 
 - **datasets/** — CRM and ERP source CSV files.
-- **docs/** — architecture, data flow, data model, catalogue, naming conventions and interview guide.
+- **docs/** — architecture, data flow, data model, catalogue, naming conventions and design decisions.
 - **scripts/** — database initialisation, Bronze and Silver loading, transformations, procedures and Gold views.
 - **tests/** — Silver and Gold data quality checks.
 
 ## Project management
 
-Project planning, task tracking and implementation progress are maintained in [the project Notion workspace](https://app.notion.com/p/407738eceaed8012828fe535c37759ef). The Notion page must be shared with anyone who has the link using view-only access before external reviewers can open it.
+Project planning, task tracking and implementation progress are maintained in [the project Notion workspace](https://app.notion.com/p/407738eceaed8012828fe535c37759ef).
 
 ## Project scope
 

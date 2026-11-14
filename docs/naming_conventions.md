@@ -36,4 +36,4 @@ This project uses consistent database, schema, object, column, and file naming s
 
 - Keep reusable project documentation in `docs/`.
 - Keep executable SQL in `scripts/` and validation queries in `tests/`.
-- Use branch names that describe the purpose of the work; the current review branch is `interview-ready-review`.
+- Use branch names that describe the purpose of the work.

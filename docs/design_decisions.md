@@ -1,6 +1,6 @@
-# Interview Guide
+# Design Decisions
 
-This guide summarises the decisions in this SQL Server warehouse so I can explain the project clearly in a technical interview.
+This page summarises the main design decisions in this SQL Server warehouse and the trade-offs behind them.
 
 ## 1. What the project does
 
